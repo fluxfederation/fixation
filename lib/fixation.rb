@@ -14,6 +14,20 @@ module Fixation
       @table_name = table_name
       @connection = connection
       @now = now
+
+      @klass_name = @table_name.classify
+      begin
+        @klass = @klass_name.constantize
+        @klass = nil unless @klass < ActiveRecord::Base
+      rescue NameError
+        ActiveRecord::Base.logger.warn "couldn't load #{@klass_name} for fixture table #{table_name}: #{$!}"
+      end
+
+      if @klass
+        @primary_key = @klass.primary_key
+        @record_timestamps = @klass.record_timestamps
+        @inheritance_column = @klass.inheritance_column
+      end
     end
 
     def columns_hash
@@ -49,12 +63,8 @@ module Fixation
 
     def embellish_fixture(name, attributes, columns_hash)
       # populate the primary key column, if not already set
-      if columns_hash['id'] && !attributes.has_key?('id')
-        attributes['id'] = Fixation.identify(name, columns_hash['id'].type)
-      end
-
-      if columns_hash['uuid'] && !attributes.has_key?('uuid')
-        attributes['uuid'] = Fixation.identify(name, columns_hash['uuid'].type)
+      if @primary_key && columns_hash[@primary_key] && !attributes.has_key?(@primary_key)
+        attributes[@primary_key] = Fixation.identify(name, columns_hash[@primary_key].type)
       end
 
       # substitute $LABEL into all string values
@@ -63,27 +73,50 @@ module Fixation
       end
 
       # populate any timestamp columns, if not already set
-      %w(created_at updated_at).each do |column_name|
-        attributes[column_name] = now if columns_hash[column_name] && !attributes.has_key?(column_name)
-      end
-      %w(created_at updated_at).each do |column_name|
-        attributes[column_name] = now.to_date if columns_hash[column_name] && !attributes.has_key?(column_name)
+      if @record_timestamps
+        %w(created_at updated_at).each do |column_name|
+          attributes[column_name] = now if columns_hash[column_name] && !attributes.has_key?(column_name)
+        end
+        %w(created_at updated_at).each do |column_name|
+          attributes[column_name] = now.to_date if columns_hash[column_name] && !attributes.has_key?(column_name)
+        end
       end
 
-      # convert any association names into the identity column equivalent
+      # convert enum names to values
+      @klass.defined_enums.each do |name, values|
+        attributes[name] = values.fetch(attributes[name], attributes[name]) if attributes.has_key?(name)
+      end if @klass.respond_to?(:defined_enums)
+
+      # convert any association names into the identity column equivalent - following code from activerecord's fixtures.rb
       nonexistant_columns = attributes.keys - columns_hash.keys
-      nonexistant_columns.each do |column_name|
-        if columns_hash["#{column_name}_id"]
-          value = attributes.delete(column_name)
 
-          if columns_hash["#{column_name}_type"] && value.is_a?(String) && value.sub!(/\s*\(([^\)]*)\)\s*$/, "")
-            # support polymorphic belongs_to as "label (Type)"
-            attributes["#{column_name}_type"] = $1
+      if @klass && nonexistant_columns.present?
+        # If STI is used, find the correct subclass for association reflection
+        reflection_class =
+          if attributes.include?(@inheritance_column)
+            attributes[@inheritance_column].constantize rescue @klass
+          else
+            @klass
           end
 
-          attributes["#{column_name}_id"] = value ? Fixation.identify(value) : value
-        else
-          raise ActiveRecord::Fixture::FormatError, "No column named #{column_name} found in table #{table_name}"
+        nonexistant_columns.each do |column_name|
+          association = reflection_class._reflections[column_name.to_sym]
+
+          if association.nil?
+            raise ActiveRecord::Fixture::FormatError, "No column named #{column_name} found in table #{table_name}"
+          elsif association.macro != :belongs_to
+            raise ActiveRecord::Fixture::FormatError, "Association #{column_name} in table #{table_name} has type #{association.macro}, which is not currently supported"
+          else
+            value = attributes.delete(column_name)
+
+            if association.options[:polymorphic] && value.is_a?(String) && value.sub!(/\s*\(([^\)]*)\)\s*$/, "")
+              # support polymorphic belongs_to as "label (Type)"
+              attributes[association.foreign_type] = $1
+            end
+
+            fk_name = (association.options[:foreign_key] || "#{association.name}_id").to_s
+            attributes[fk_name] = value ? ActiveRecord::FixtureSet.identify(value) : value
+          end
         end
       end
     end
@@ -225,17 +258,13 @@ module Fixation
   cattr_accessor :paths
   self.paths = %w(test/fixtures spec/fixtures)
 
+  def self.preload_for_spring
+    build_fixtures
+    unload_models!
+  end
+
   def self.build_fixtures
-    subclasses_before = ActiveRecord::Base.subclasses
-
     @fixtures = Fixtures.new
-
-    subclasses_after = ActiveRecord::Base.subclasses
-
-    unless subclasses_after.size == subclasses_before.size
-      new_subclasses = subclasses_after - subclasses_before
-      puts "warning: #{new_subclasses.to_sentence} #{new_subclasses.size == 1 ? 'was' : 'were'} auto-loaded while loading fixtures.  #{new_subclasses.size == 1 ? 'this class' : 'these classes'} may not reload properly."
-    end
   end
 
   def self.apply_fixtures
@@ -259,6 +288,22 @@ module Fixation
   else
     def self.identify(label, column_type = :integer)
       ActiveRecord::FixtureSet.identify(label, column_type)
+    end
+  end
+
+  def self.running_under_spring?
+    defined?(Spring::Application)
+  end
+
+  # reloads Rails (using the code from Spring) in order to unload the model classes that get
+  # auto-loaded when we read the fixture definitions.
+  def self.unload_models!
+    # Rails 5.1 forward-compat. AD::R is deprecated to AS::R in Rails 5.
+    if defined? ActiveSupport::Reloader
+      Rails.application.reloader.reload!
+    else
+      ActionDispatch::Reloader.cleanup!
+      ActionDispatch::Reloader.prepare!
     end
   end
 end
