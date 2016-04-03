@@ -25,7 +25,6 @@ Then, make an initializer:
 
     if ENV['PRELOAD_FIXTURES'].to_i > 0 && Rails.env.test?
       Rails.application.config.after_initialize do
-        require 'spec/fixture_helper'
         Fixation.build_fixtures
       end
     end
