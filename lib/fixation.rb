@@ -163,9 +163,11 @@ module Fixation
     end
 
     def apply_fixtures(connection = ActiveRecord::Base.connection)
-      @statements.each do |table_name, table_statements|
-        table_statements.each do |statement|
-          connection.execute(statement)
+      connection.transaction do
+        @statements.each do |table_name, table_statements|
+          table_statements.each do |statement|
+            connection.execute(statement)
+          end
         end
       end
     end
