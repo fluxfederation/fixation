@@ -47,7 +47,7 @@ config.include Fixation.fixture_methods
 
 ## Usage
 
-Simply use run your tests under spring.
+Simply run your tests under spring.
 
     bundle exec spring spec/models/my_spec.rb
 
