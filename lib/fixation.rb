@@ -258,11 +258,6 @@ module Fixation
   cattr_accessor :paths
   self.paths = %w(test/fixtures spec/fixtures)
 
-  def self.preload_for_spring
-    build_fixtures
-    unload_models!
-  end
-
   def self.build_fixtures
     @fixtures = Fixtures.new
   end
@@ -293,6 +288,18 @@ module Fixation
 
   def self.running_under_spring?
     defined?(Spring::Application)
+  end
+
+  def self.preload_for_spring
+    build_fixtures
+    unload_models!
+    watch_paths
+  end
+
+  def self.watch_paths
+    paths.each do |path|
+      Spring.watch(path)
+    end
   end
 
   # reloads Rails (using the code from Spring) in order to unload the model classes that get
