@@ -7,26 +7,28 @@ require "fixation/version"
 
 module Fixation
   class FixtureTable
-    attr_reader :filename, :table_name, :connection, :now
+    attr_reader :filename, :class_name, :table_name, :connection, :now
 
-    def initialize(filename, table_name, connection, now)
+    def initialize(filename, basename, connection, now)
       @filename = filename
-      @table_name = table_name
       @connection = connection
       @now = now
 
-      @klass_name = @table_name.classify
+      @class_name = basename.classify
       begin
-        @klass = @klass_name.constantize
+        @klass = @class_name.constantize
         @klass = nil unless @klass < ActiveRecord::Base
       rescue NameError
-        ActiveRecord::Base.logger.warn "couldn't load #{@klass_name} for fixture table #{table_name}: #{$!}"
+        ActiveRecord::Base.logger.warn "couldn't load #{class_name} for fixture table #{table_name}: #{$!}"
       end
 
       if @klass
+        @table_name = @klass.table_name
         @primary_key = @klass.primary_key
         @record_timestamps = @klass.record_timestamps
         @inheritance_column = @klass.inheritance_column
+      else
+        @table_name = basename.gsub('/', '_')
       end
     end
 
@@ -181,18 +183,18 @@ module Fixation
       Fixation.paths.each do |path|
         Dir["#{path}/{**,*}/*.yml"].each do |pathname|
           basename = pathname[path.size + 1..-5]
-          compile_fixture_file(pathname, basename.gsub('/', '_'), basename.classify, connection, now) if ::File.file?(pathname)
+          compile_fixture_file(pathname, basename, connection, now) if ::File.file?(pathname)
         end
       end
 
       puts "#{Time.now} built fixtures for #{@fixture_ids.size} tables" if Fixation.trace
     end
 
-    def compile_fixture_file(filename, table_name, class_name, connection, now)
-      fixture_table = FixtureTable.new(filename, table_name, connection, now)
-      @fixture_ids[table_name] = fixture_table.fixture_ids
-      @statements[table_name] = fixture_table.statements
-      @class_names[table_name] = class_name
+    def compile_fixture_file(filename, basename, connection, now)
+      fixture_table = FixtureTable.new(filename, basename, connection, now)
+      @fixture_ids[fixture_table.table_name] = fixture_table.fixture_ids
+      @statements[fixture_table.table_name] = fixture_table.statements
+      @class_names[fixture_table.table_name] = fixture_table.class_name
     end
 
     def apply_fixtures(connection = ActiveRecord::Base.connection)
