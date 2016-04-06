@@ -6,10 +6,12 @@ Like ActiveRecord's normal fixture implementation, Fixation will load the model 
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Add this gem to your application's Gemfile:
 
 ```ruby
-gem 'fixation'
+groups :development, :test do
+  gem 'fixation'
+end
 ```
 
 And then execute:
@@ -57,6 +59,23 @@ You'll need to run rake tasks like `db:create` and `db:test:prepare` the normal 
 
 Not all features of regular ActiveRecord fixtures are supported:
 * HABTM support has not been implemented (does anyone use HABTM these days?)
+
+## Multiple fixture paths
+
+Unlike regular ActiveRecord fixtures, Fixation supports looking for fixture files in multiple paths.  It defaults to looking in `test/fixtures` and `spec/fixtures`.  You can change this in your initializer before you do the spring setup:
+
+```ruby
+if Rails.env.test?
+  Fixation.paths = %w(spec/fixtures db/seeds)
+end
+
+if Rails.env.test? && Fixation.running_under_spring?
+  Rails.application.config.after_initialize do
+    Fixation.preload_for_spring
+  end
+end
+```
+
 
 ## Contributing
 
