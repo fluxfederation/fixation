@@ -192,9 +192,10 @@ module Fixation
 
     def compile_fixture_file(filename, basename, connection, now)
       fixture_table = FixtureTable.new(filename, basename, connection, now)
-      @fixture_ids[fixture_table.table_name] = fixture_table.fixture_ids
-      @statements[fixture_table.table_name] = fixture_table.statements
-      @class_names[fixture_table.table_name] = fixture_table.class_name
+      fixture_name = basename.gsub('/', '_')
+      @fixture_ids[fixture_name] = fixture_table.fixture_ids
+      @statements[fixture_name] = fixture_table.statements
+      @class_names[fixture_name] = fixture_table.class_name
     end
 
     def apply_fixtures(connection = ActiveRecord::Base.connection)
@@ -227,30 +228,29 @@ module Fixation
           super
         end
 
-        fixture_ids.each do |table_name, fixtures|
+        fixture_ids.each do |fixture_name, fixtures|
           begin
-            klass = class_names[table_name].constantize
+            klass = class_names[fixture_name].constantize
           rescue NameError
             next
           end
 
-          accessor_name = table_name
-          define_method(accessor_name) do |*fixture_names|
+          define_method(fixture_name) do |*fixture_names|
             force_reload = fixture_names.pop if fixture_names.last == true || fixture_names.last == :reload
 
-            @fixture_cache[table_name] ||= {}
+            @fixture_cache[fixture_name] ||= {}
 
             instances = fixture_names.map do |name|
               id = fixtures[name.to_s]
-              raise StandardError, "No fixture named '#{name}' found for fixture set '#{table_name}'" if id.nil?
+              raise StandardError, "No fixture named '#{name}' found for fixture set '#{fixture_name}'" if id.nil?
 
-              @fixture_cache[table_name].delete(name) if force_reload
-              @fixture_cache[table_name][name] ||= klass.find(id)
+              @fixture_cache[fixture_name].delete(name) if force_reload
+              @fixture_cache[fixture_name][name] ||= klass.find(id)
             end
 
             instances.size == 1 ? instances.first : instances
           end
-          private accessor_name
+          private fixture_name
         end
       end
     end
