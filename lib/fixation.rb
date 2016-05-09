@@ -102,7 +102,7 @@ module Fixation
           end
 
         nonexistant_columns.each do |column_name|
-          association = reflection_class._reflections[column_name.to_sym]
+          association = reflection_class.reflect_on_association(column_name)
 
           if association.nil?
             raise ActiveRecord::Fixture::FormatError, "No column named #{column_name} found in table #{table_name}"
