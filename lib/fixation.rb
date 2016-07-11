@@ -138,6 +138,7 @@ module Fixation
         columns_to_include = Set.new
         embellished_rows.each do |name, attributes|
           attributes.each do |column_name, value|
+            raise ActiveRecord::Fixture::FormatError, "No column named #{column_name.inspect} found in table #{table_name.inspect} (attribute on fixture #{name.inspect})" unless columns_hash[column_name]
             columns_to_include.add(columns_hash[column_name])
           end
         end
