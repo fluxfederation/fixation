@@ -76,6 +76,16 @@ if Rails.env.test? && Fixation.running_under_spring?
 end
 ```
 
+## Auto-clearing other tables
+
+By default Fixation will only reset those tables that have a fixture file, like Rails.  Optionally, you can tell it to clear all other tables so that you don't need to make empty fixture files.
+
+```ruby
+if Rails.env.test?
+  Fixation.clear_other_tables = true
+end
+```
+
 
 ## Contributing
 

@@ -206,6 +206,11 @@ module Fixation
             connection.execute(statement)
           end
         end
+        if Fixation.clear_other_tables
+          (connection.tables - Fixation.tables_not_to_clear - @statements.keys).each do |table_name|
+            connection.execute("DELETE FROM #{connection.quote_table_name table_name}")
+          end
+        end
       end
     end
 
@@ -259,7 +264,10 @@ module Fixation
 
   cattr_accessor :trace
   cattr_accessor :paths
+  cattr_accessor :clear_other_tables
+  cattr_accessor :tables_not_to_clear
   self.paths = %w(test/fixtures spec/fixtures)
+  self.tables_not_to_clear = %w(schema_migrations)
 
   def self.build_fixtures
     @fixtures = Fixtures.new
