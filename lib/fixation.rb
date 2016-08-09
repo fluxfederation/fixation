@@ -200,17 +200,25 @@ module Fixation
     end
 
     def apply_fixtures(connection = ActiveRecord::Base.connection)
-      connection.transaction do
-        @statements.each do |table_name, table_statements|
-          table_statements.each do |statement|
-            connection.execute(statement)
-          end
+      connection.disable_referential_integrity do
+        connection.transaction do
+          apply_fixture_statements(connection)
+          clear_other_tables(connection) if Fixation.clear_other_tables
         end
-        if Fixation.clear_other_tables
-          (connection.tables - Fixation.tables_not_to_clear - @statements.keys).each do |table_name|
-            connection.execute("DELETE FROM #{connection.quote_table_name table_name}")
-          end
+      end
+    end
+
+    def apply_fixture_statements(connection)
+      @statements.each do |table_name, table_statements|
+        table_statements.each do |statement|
+          connection.execute(statement)
         end
+      end
+    end
+
+    def clear_other_tables(connection)
+      (connection.tables - Fixation.tables_not_to_clear - @statements.keys).each do |table_name|
+        connection.execute("DELETE FROM #{connection.quote_table_name table_name}")
       end
     end
 
