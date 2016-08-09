@@ -26,8 +26,8 @@ module Fixation
       fixture_table = FixtureTable.new(filename, basename, connection, now)
       fixture_name = basename.gsub('/', '_')
       @fixture_ids[fixture_name] = fixture_table.fixture_ids
-      @statements[fixture_name] = fixture_table.statements
       @class_names[fixture_name] = fixture_table.class_name
+      @statements[fixture_table.table_name] = fixture_table.statements
     end
 
     def apply_fixtures(connection = ActiveRecord::Base.connection)
