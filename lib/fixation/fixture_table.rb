@@ -1,11 +1,11 @@
 module Fixation
   class FixtureTable
-    attr_reader :filename, :class_name, :table_name, :connection, :now
+    attr_reader :filename, :class_name, :table_name, :connection, :loaded_at
 
-    def initialize(filename, basename, connection, now)
+    def initialize(filename, basename, connection, loaded_at)
       @filename = filename
       @connection = connection
-      @now = now
+      @loaded_at = loaded_at
 
       @class_name = basename.classify
       begin
@@ -52,11 +52,11 @@ module Fixation
 
     def embellished_rows
       @embellished_rows ||= parsed_rows.each do |name, attributes|
-        embellish_fixture(name, attributes, columns_hash)
+        embellish_fixture(name, attributes)
       end
     end
 
-    def embellish_fixture(name, attributes, columns_hash)
+    def embellish_fixture(name, attributes)
       # populate the primary key column, if not already set
       if @primary_key && columns_hash[@primary_key] && !attributes.has_key?(@primary_key)
         attributes[@primary_key] = Fixation.identify(name, columns_hash[@primary_key].type)
@@ -70,10 +70,10 @@ module Fixation
       # populate any timestamp columns, if not already set
       if @record_timestamps
         %w(created_at updated_at).each do |column_name|
-          attributes[column_name] = now if columns_hash[column_name] && !attributes.has_key?(column_name)
+          attributes[column_name] = loaded_at if columns_hash[column_name] && !attributes.has_key?(column_name)
         end
         %w(created_at updated_at).each do |column_name|
-          attributes[column_name] = now.to_date if columns_hash[column_name] && !attributes.has_key?(column_name)
+          attributes[column_name] = loaded_at.to_date if columns_hash[column_name] && !attributes.has_key?(column_name)
         end
       end
 
