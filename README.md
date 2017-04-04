@@ -22,7 +22,7 @@ Or install it yourself as:
 
     $ gem install fixation
 
-Then, make an initializer:
+Then, make an initializer file in config/initializers:
 
 ```ruby
 if Rails.env.test? && Fixation.running_under_spring?
@@ -32,9 +32,7 @@ if Rails.env.test? && Fixation.running_under_spring?
 end
 ```
 
-And run `spring stop` so this gets picked up.
-
-Finally, open up your spec_helper.rb, and find the current `global_fixtures` setting:
+Open up your spec_helper.rb, and find the current `global_fixtures` setting:
 
 ```ruby
 config.global_fixtures = :all
@@ -46,6 +44,8 @@ Change that to [] so that ActiveRecord doesn't load the fixtures again itself, a
 config.global_fixtures = []
 config.include Fixation.fixture_methods
 ```
+
+Finally run `spring stop` so these changes get picked up.
 
 ## Usage
 
