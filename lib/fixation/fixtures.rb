@@ -1,33 +1,62 @@
 module Fixation
+  class FixtureContent
+  end
+
   class Fixtures
     def initialize
-      @class_names = {}
-      @fixture_ids = {}
-      @statements = {}
-
-      compile_fixture_files
+      @fixture_tables = {}
     end
 
     def compile_fixture_files(connection = ActiveRecord::Base.connection)
       puts "#{Time.now} building fixtures" if Fixation.trace
 
-      now = ActiveRecord::Base.default_timezone == :utc ? Time.now.utc : Time.now
+      @class_names = {}
+
+      @loaded_at = ActiveRecord::Base.default_timezone == :utc ? Time.now.utc : Time.now
+
       Fixation.paths.each do |path|
         Dir["#{path}/{**,*}/*.yml"].each do |pathname|
           basename = pathname[path.size + 1..-5]
-          compile_fixture_file(pathname, basename, connection, now) if ::File.file?(pathname)
+          load_fixture_file(pathname, basename, connection) if ::File.file?(pathname)
         end
       end
+
+      Fixation.paths.each do |path|
+        Dir["#{path}/{**,*}/*.rb"].each do |pathname|
+          FixtureContent.instance_eval(File.read(pathname)) if ::File.file?(pathname)
+        end
+      end
+
+      bake_fixtures
 
       puts "#{Time.now} built fixtures for #{@fixture_ids.size} tables" if Fixation.trace
     end
 
-    def compile_fixture_file(filename, basename, connection, now)
-      fixture_table = FixtureTable.new(filename, basename, connection, now)
-      fixture_name = basename.gsub('/', '_')
-      @fixture_ids[fixture_name] = fixture_table.fixture_ids
-      @class_names[fixture_name] = fixture_table.class_name
-      @statements[fixture_table.table_name] = fixture_table.statements
+    def load_fixture_file(filename, basename, connection)
+      fixture_table = FixtureTable.new(filename, basename, connection, @loaded_at)
+      @fixture_tables[fixture_table.fixture_name] = fixture_table
+      @class_names[fixture_table.fixture_name] = fixture_table.class_name
+    end
+
+    def add_fixture(fixture_for, name, attributes)
+      raise "Fixtures have already been compiled!  You can only call add_fixture from a file in one of the fixture directories, which is loaded on boot." if baked_fixtures?
+      fixture_table = @fixture_tables[fixture_for.to_s] or raise(ArgumentError, "No fixture file for #{fixture_for}") # TODO: consider allowing this
+      fixture_table.add_row(name.to_s, attributes.stringify_keys)
+      name
+    end
+
+    def bake_fixtures
+      @fixture_ids = {}
+      @statements = {}
+
+      @fixture_tables.each do |fixture_name, fixture_table|
+        @fixture_ids[fixture_table.fixture_name] = fixture_table.fixture_ids
+        @statements[fixture_table.table_name] = fixture_table.statements
+      end
+    end
+
+    def baked_fixtures?
+      !@fixture_ids.nil? || !@statements.nil?
     end
 
     def apply_fixtures(connection = ActiveRecord::Base.connection)

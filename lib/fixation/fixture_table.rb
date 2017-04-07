@@ -1,11 +1,13 @@
 module Fixation
   class FixtureTable
-    attr_reader :filename, :class_name, :table_name, :connection, :loaded_at
+    attr_reader :filename, :fixture_name, :class_name, :table_name, :connection, :loaded_at
 
     def initialize(filename, basename, connection, loaded_at)
       @filename = filename
       @connection = connection
       @loaded_at = loaded_at
+
+      @fixture_name = basename.gsub('/', '_')
 
       @class_name = basename.classify
       begin
@@ -114,6 +116,11 @@ module Fixation
           end
         end
       end
+    end
+
+    def add_row(name, attributes)
+      embellish_fixture(name, attributes)
+      embellished_rows[name] = attributes
     end
 
     def fixture_ids

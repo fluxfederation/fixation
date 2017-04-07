@@ -25,6 +25,7 @@ module Fixation
 
   def self.build_fixtures
     @fixtures = Fixtures.new
+    @fixtures.compile_fixture_files
   end
 
   def self.apply_fixtures
@@ -35,6 +36,10 @@ module Fixation
   def self.fixture_methods
     build_fixtures unless @fixtures
     @fixtures.fixture_methods
+  end
+
+  def self.add_fixture(fixture_for, name, attributes)
+    @fixtures.add_fixture(fixture_for, name, attributes)
   end
 
   # Returns a consistent, platform-independent identifier for +label+.
