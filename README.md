@@ -86,10 +86,26 @@ if Rails.env.test?
 end
 ```
 
+## Ruby fixtures
+
+As well as traditional .yml fixture files, Fixation allows you to drop .rb files into your fixture directory.  You can then call the `add_fixture` method, passing the name of the table, the name of the fixture, and the attributes:
+
+```ruby
+10.times do |n|
+  Fixation.add_fixture(:customers, "active_customer_#{n}", active: true, name: "Sue #{n}")
+end
+```
+
+(You should avoid accessing your actual model classes here, since that will cause them to be auto-loaded.)
 
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/willbryant/fixation.
+
+## Thanks
+
+* Andy Newport (@newportandy)
+* Andrew Clemons (@aclemons)
 
 ## License
 
