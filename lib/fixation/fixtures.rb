@@ -77,7 +77,8 @@ module Fixation
     end
 
     def clear_other_tables(connection)
-      (connection.tables - Fixation.tables_not_to_clear - @statements.keys).each do |table_name|
+      data_sources = connection.respond_to?(:data_sources) ? connection.data_sources : connection.tables
+      (data_sources - Fixation.tables_not_to_clear - @statements.keys).each do |table_name|
         connection.execute("DELETE FROM #{connection.quote_table_name table_name}")
       end
     end
