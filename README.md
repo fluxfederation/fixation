@@ -98,6 +98,12 @@ end
 
 (You should avoid accessing your actual model classes here, since that will cause them to be auto-loaded.)
 
+## Reversing mappings
+
+When debugging difficult test scenarios, it can be useful to confirm which record you are looking at.  As well as the usual forward mappings from fixture name to record, Fixation supports mapping back from record or record ID to the fixture name.
+
+For example, if `customers(:jeff)` returns a record with ID `12345678`, then `customer_fixture_name_for_id(12345678)` will return `:jeff`, as will `customer_fixture_name_for_id(Customer.find(12345678))`.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/willbryant/fixation.

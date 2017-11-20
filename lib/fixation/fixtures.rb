@@ -126,6 +126,15 @@ module Fixation
             instances.size == 1 ? instances.first : instances
           end
           private fixture_name
+
+          name_method = :"#{fixture_name.singularize}_fixture_name_for_id"
+          define_method(name_method) do |fixture_id|
+            fixture_id = fixture_id.to_param
+            fixtures.detect do |name, id|
+              break name.to_sym if id.to_param == fixture_id
+            end or raise ArgumentError, "No fixture with ID #{fixture_id.inspect} in table #{fixture_name}"
+          end
+          private name_method
         end
       end
     end
