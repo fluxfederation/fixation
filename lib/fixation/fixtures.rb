@@ -15,9 +15,11 @@ module Fixation
       @loaded_at = ActiveRecord::Base.default_timezone == :utc ? Time.now.utc : Time.now
 
       Fixation.paths.each do |path|
-        Dir["#{path}/{**,*}/*.yml"].each do |pathname|
-          basename = pathname[path.size + 1..-5]
-          load_fixture_file(pathname, basename, connection) if ::File.file?(pathname)
+        Fixation.extensions.each do |extension|
+          Dir["#{path}/{**,*}/*#{extension}"].each do |pathname|
+            basename = pathname[path.size + 1..-(extension.size + 1)]
+            load_fixture_file(pathname, basename, connection) if ::File.file?(pathname)
+          end
         end
       end
 

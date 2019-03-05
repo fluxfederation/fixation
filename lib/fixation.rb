@@ -8,9 +8,13 @@ require_relative "fixation/fixture_table"
 require_relative "fixation/fixtures"
 
 module Fixation
-  # The list of paths to look in to find .yml fixture files.
+  # The list of paths to look in to find fixture files.
   cattr_accessor :paths
   self.paths = %w(test/fixtures spec/fixtures)
+
+  # The list of extensions to look for in fixture directories.
+  cattr_accessor :extensions
+  self.extensions = %w(.yml .yml.erb)
 
   # Set to true to clear any tables found in the database that do *not* have a fixture file.
   cattr_accessor :clear_other_tables
