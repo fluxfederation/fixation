@@ -76,6 +76,16 @@ if Rails.env.test? && Fixation.running_under_spring?
 end
 ```
 
+## Included fixture file extensions
+
+Fixation will load files with either the `.yml` or `.yml.erb` extension from the configured fixture paths. You can change this in your initializer in a similar fashion to the fixture paths:
+
+```ruby
+if Rails.env.test?
+  Fixation.extensions = %w(.yml .other.extension)
+end
+```
+
 ## Auto-clearing other tables
 
 By default Fixation will only reset those tables that have a fixture file, like Rails.  Optionally, you can tell it to clear all other tables so that you don't need to make empty fixture files.
