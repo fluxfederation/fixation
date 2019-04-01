@@ -2,6 +2,12 @@ module Fixation
   class FixtureTable
     attr_reader :filename, :fixture_name, :class_name, :table_name, :connection, :loaded_at
 
+    def self.erb_content(filename)
+      template = File.read(filename)
+      render_context = ActiveRecord::FixtureSet::RenderContext.create_subclass.new.get_binding
+      ERB.new(template).result(render_context)
+    end
+
     def initialize(filename, basename, connection, loaded_at)
       @filename = filename
       @connection = connection
@@ -31,14 +37,8 @@ module Fixation
       @columns_hash ||= connection.columns(table_name).index_by(&:name)
     end
 
-    def content
-      template = File.read(filename)
-      render_context = ActiveRecord::FixtureSet::RenderContext.create_subclass.new.get_binding
-      ERB.new(template).result(render_context)
-    end
-
     def parsed_rows
-      result = YAML.load(content)
+      result = YAML.load(self.class.erb_content(filename))
       result ||= {} # for completely empty files
 
       unless (result.is_a?(Hash) || result.is_a?(YAML::Omap)) && result.all? { |name, attributes| name.is_a?(String) && attributes.is_a?(Hash) }
