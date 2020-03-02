@@ -20,9 +20,9 @@ module Fixation
   cattr_accessor :clear_other_tables
 
   # Set to the list of tables you don't want to clear (if clear_other_tables is turned on).
-  # Defaults to just schema_migrations.
+  # Defaults to just schema_migrations and ar_internal_metadata.
   cattr_accessor :tables_not_to_clear
-  self.tables_not_to_clear = %w(schema_migrations)
+  self.tables_not_to_clear = %w(schema_migrations ar_internal_metadata)
 
   # Set to true to log some debugging information to stdout.
   cattr_accessor :trace
