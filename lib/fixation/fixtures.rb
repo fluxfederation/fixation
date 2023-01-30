@@ -12,7 +12,13 @@ module Fixation
 
       @class_names = {}
 
-      @loaded_at = ActiveRecord::Base.default_timezone == :utc ? Time.now.utc : Time.now
+      default_timezone = if ActiveRecord.respond_to?(:default_timezone)
+        ActiveRecord.default_timezone
+      else
+        ActiveRecord::Base.default_timezone
+      end
+
+      @loaded_at = default_timezone == :utc ? Time.now.utc : Time.now
 
       Fixation.paths.each do |path|
         Fixation.extensions.each do |extension|
