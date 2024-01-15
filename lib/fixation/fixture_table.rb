@@ -38,7 +38,7 @@ module Fixation
     end
 
     def parsed_rows
-      result = YAML.load(self.class.erb_content(filename))
+      result = YAML.unsafe_load(self.class.erb_content(filename))
       result ||= {} # for completely empty files
 
       unless (result.is_a?(Hash) || result.is_a?(YAML::Omap)) && result.all? { |name, attributes| name.is_a?(String) && attributes.is_a?(Hash) }
